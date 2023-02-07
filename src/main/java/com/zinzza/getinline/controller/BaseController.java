@@ -9,6 +9,7 @@ public class BaseController {
     // 시작 페이지 매핑
     @GetMapping("/")
     public String root() {
+//        throw new GeneralException("테스트");
         return "index";
     }
 
