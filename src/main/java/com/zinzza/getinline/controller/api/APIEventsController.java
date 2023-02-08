@@ -34,6 +34,7 @@ public class APIEventsController {
         return APIDataResponse.empty();
     }
 
+    @GetMapping("/events/{eventId}")
     public APIDataResponse<EventResponse> getEvent(@PathVariable Long eventId) {
         if (eventId.equals(2L)) {
             return APIDataResponse.empty();
