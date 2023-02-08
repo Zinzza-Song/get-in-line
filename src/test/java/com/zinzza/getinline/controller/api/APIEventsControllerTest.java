@@ -18,12 +18,12 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @WebMvcTest(APIEventsController.class)
-class APIEventControllerTest {
+class APIEventsControllerTest {
 
     private final MockMvc mvc;
     private final ObjectMapper mapper;
 
-    public APIEventControllerTest(
+    public APIEventsControllerTest(
             @Autowired MockMvc mvc,
             @Autowired ObjectMapper mapper
     ) {
