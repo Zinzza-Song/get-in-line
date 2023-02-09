@@ -3,17 +3,26 @@ package com.zinzza.getinline.controller.api;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.zinzza.getinline.constant.ErrorCode;
 import com.zinzza.getinline.constant.EventStatus;
+import com.zinzza.getinline.dto.EventDTO;
 import com.zinzza.getinline.dto.EventResponse;
+import com.zinzza.getinline.service.EventService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.List;
+import java.util.Optional;
 
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.verify;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -23,6 +32,9 @@ class APIEventsControllerTest {
     private final MockMvc mvc;
     private final ObjectMapper mapper;
 
+    @MockBean
+    private EventService eventService;
+
     public APIEventsControllerTest(
             @Autowired MockMvc mvc,
             @Autowired ObjectMapper mapper
@@ -31,13 +43,20 @@ class APIEventsControllerTest {
         this.mapper = mapper;
     }
 
-    @DisplayName("[API][GET] 이벤트 리스트 조회")
+    @DisplayName("[API][GET] 이벤트 리스트 조회 + 검색 파라미터")
     @Test
     void givenNothing_whenRequestingEvents_thenReturnsListOfEventsInStandardResponse() throws Exception {
         // Given
-
+        given(eventService.getEvents(any(), any(), any(), any(), any())).willReturn(List.of(createEventDTO()));
         // When & Then
-        mvc.perform(get("/api/events"))
+        mvc.perform(
+                        get("/api/events")
+                                .queryParam("placeId", "1")
+                                .queryParam("eventName", "운동")
+                                .queryParam("eventStatus", EventStatus.OPENED.name())
+                                .queryParam("eventStartDatetime", "2021-01-01T00:00:00")
+                                .queryParam("eventEndDatetime", "2021-01-02T00:00:00")
+                )
                 .andExpect(status().isOk())
                 .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
                 .andExpect(jsonPath("$.data").isArray())
@@ -56,6 +75,7 @@ class APIEventsControllerTest {
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.errorCode").value(ErrorCode.OK.getCode()))
                 .andExpect(jsonPath("$.message").value(ErrorCode.OK.getMessage()));
+        verify(eventService).getEvents(any(), any(), any(), any(), any());
     }
 
     @DisplayName("[API][POST] 이벤트 생성")
@@ -72,7 +92,7 @@ class APIEventsControllerTest {
                 24,
                 "마스크 꼭 착용하세요"
         );
-
+        given(eventService.createEvent(any())).willReturn(true);
         // When & Then
         mvc.perform(
                         post("/api/events")
@@ -81,9 +101,11 @@ class APIEventsControllerTest {
                 )
                 .andExpect(status().isCreated())
                 .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.data").value(Boolean.TRUE.toString()))
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.errorCode").value(ErrorCode.OK.getCode()))
                 .andExpect(jsonPath("$.message").value(ErrorCode.OK.getMessage()));
+        verify(eventService).createEvent(any());
     }
 
     @DisplayName("[API][GET] 단일 이벤트 조회 - 이벤트 있는 경우, 이벤트 데이터를 담은 표준 API 출력")
@@ -91,6 +113,7 @@ class APIEventsControllerTest {
     void givenEventId_whenRequestingExistentEvent_thenReturnsEventInStandardResponse() throws Exception {
         // Given
         long eventId = 1L;
+        given(eventService.getEvent(eventId)).willReturn(Optional.of(createEventDTO()));
 
         // When & Then
         mvc.perform(get("/api/events/" + eventId))
@@ -112,6 +135,7 @@ class APIEventsControllerTest {
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.errorCode").value(ErrorCode.OK.getCode()))
                 .andExpect(jsonPath("$.message").value(ErrorCode.OK.getMessage()));
+        verify(eventService).getEvent(eventId);
     }
 
     @DisplayName("[API][GET] 단일 이벤트 조회 - 이벤트 없는 경우, 빈 표준 API 출력")
@@ -119,6 +143,7 @@ class APIEventsControllerTest {
     void givenEventId_whenRequestingNonexistentEvent_thenReturnsEmptyStandardResponse() throws Exception {
         // Given
         long eventId = 2L;
+        given(eventService.getEvent(eventId)).willReturn(Optional.empty());
 
         // When & Then
         mvc.perform(get("/api/events/" + eventId))
@@ -128,6 +153,7 @@ class APIEventsControllerTest {
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.errorCode").value(ErrorCode.OK.getCode()))
                 .andExpect(jsonPath("$.message").value(ErrorCode.OK.getMessage()));
+        verify(eventService).getEvent(eventId);
     }
 
     @DisplayName("[API][PUT] 이벤트 변경")
@@ -145,6 +171,7 @@ class APIEventsControllerTest {
                 24,
                 "마스크 꼭 착용하세요"
         );
+        given(eventService.modifyEvent(eq(eventId), any())).willReturn(true);
 
         // When & Then
         mvc.perform(
@@ -154,9 +181,11 @@ class APIEventsControllerTest {
                 )
                 .andExpect(status().isOk())
                 .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.data").value(Boolean.TRUE.toString()))
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.errorCode").value(ErrorCode.OK.getCode()))
                 .andExpect(jsonPath("$.message").value(ErrorCode.OK.getMessage()));
+        verify(eventService).modifyEvent(eq(eventId), any());
     }
 
     @DisplayName("[API][DELETE] 이벤트 삭제")
@@ -164,14 +193,33 @@ class APIEventsControllerTest {
     void givenEvent_whenDeletingAnEvent_thenReturnsSuccessfulStandardResponse() throws Exception {
         // Given
         long eventId = 1L;
+        given(eventService.removeEvent(eq(eventId))).willReturn(true);
 
         // When & Then
         mvc.perform(delete("/api/events/" + eventId))
                 .andExpect(status().isOk())
                 .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.data").value(Boolean.TRUE.toString()))
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.errorCode").value(ErrorCode.OK.getCode()))
                 .andExpect(jsonPath("$.message").value(ErrorCode.OK.getMessage()));
+
+        verify(eventService).removeEvent(eq(eventId));
+    }
+
+    private EventDTO createEventDTO() {
+        return EventDTO.of(
+                1L,
+                "오후 운동",
+                EventStatus.OPENED,
+                LocalDateTime.of(2021, 1, 1, 13, 0, 0),
+                LocalDateTime.of(2021, 1, 1, 16, 0, 0),
+                0,
+                24,
+                "마스크 꼭 착용하세요",
+                LocalDateTime.now(),
+                LocalDateTime.now()
+        );
     }
 
 }
