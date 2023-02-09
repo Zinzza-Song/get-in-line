@@ -6,17 +6,18 @@ import com.zinzza.getinline.dto.EventRequest;
 import com.zinzza.getinline.dto.EventResponse;
 import com.zinzza.getinline.service.EventService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
-import javax.validation.Valid;
 import javax.validation.constraints.Positive;
 import javax.validation.constraints.Size;
 import java.time.LocalDateTime;
 import java.util.List;
 
+@Slf4j
 @Validated
 @RequiredArgsConstructor
 @RequestMapping("/api")
@@ -46,7 +47,8 @@ public class APIEventsController {
 
     @ResponseStatus(HttpStatus.CREATED)
     @PostMapping("/events")
-    public APIDataResponse<String> createEvent(@Valid @RequestBody EventRequest eventRequest) {
+    public APIDataResponse<String> createEvent(@RequestBody EventRequest eventRequest) {
+        log.debug("보고 싶은 값: {}", eventRequest);
         boolean result = eventService.createEvent(eventRequest.toDTO());
 
         return APIDataResponse.of(Boolean.toString(result));
